@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="piggyApp">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Piggy – Personal Money Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body ng-controller="MainCtrl as main">
+
+<div class="app-shell">
+  <nav class="sidebar">
+    <div class="brand"><i class="fa-solid fa-piggy-bank"></i> Piggy</div>
+    <ul class="nav-list">
+      <li ng-repeat="p in main.pages">
+        <button class="nav-btn" ng-class="{active: main.view === p.id}" ng-click="main.go(p.id)">
+          <i class="fa-solid {{p.icon}}"></i> <span>{{p.label}}</span>
+        </button>
+      </li>
+    </ul>
+    <button class="nav-btn reset" ng-click="main.resetData()"><i class="fa-solid fa-rotate-left"></i> <span>Reset demo data</span></button>
+  </nav>
+
+  <main class="content">
+
+    <!-- ================= DASHBOARD ================= -->
+    <section ng-if="main.view === 'dashboard'" ng-controller="DashboardCtrl as d">
+      <h1 class="page-title">Hello, here is your money today</h1>
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3"><stat-card label="Balance" value="d.t.balance" tone="ink"></stat-card></div>
+        <div class="col-6 col-lg-3"><stat-card label="Income" value="d.t.income" tone="green"></stat-card></div>
+        <div class="col-6 col-lg-3"><stat-card label="Spent" value="d.t.expense" tone="red"></stat-card></div>
+        <div class="col-6 col-lg-3"><stat-card label="In piggy bank" value="d.t.saved" tone="pink"></stat-card></div>
+      </div>
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="panel jar-panel">
+            <div class="jar"><div class="jar-fill" ng-style="{height: d.jarPercent() + '%'}"></div><span class="jar-label">{{d.jarPercent()}}%</span></div>
+            <div>
+              <h2 class="panel-title">Piggy bank</h2>
+              <p class="muted mb-1">{{d.t.saved | inr}} saved of {{d.t.target | inr}} in goals</p>
+              <button class="btn btn-piggy btn-sm" ng-click="main.go('piggy')">Manage goals</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="panel">
+            <h2 class="panel-title">Income sources</h2>
+            <p class="empty" ng-if="!d.incomeBy().length">No income added yet. Add one in Transactions.</p>
+            <div class="bar-row" ng-repeat="c in d.incomeBy()">
+              <div class="d-flex justify-content-between"><span>{{c.name}}</span><strong>{{c.total | inr}}</strong></div>
+              <div class="bar"><i class="green" ng-style="{width: c.pct + '%'}"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="panel">
+            <h2 class="panel-title">Where money went</h2>
+            <p class="empty" ng-if="!d.expenseBy().length">No expenses yet. Nothing to chart.</p>
+            <div class="bar-row" ng-repeat="c in d.expenseBy()">
+              <div class="d-flex justify-content-between"><span>{{c.name}}</span><strong>{{c.total | inr}}</strong></div>
+              <div class="bar"><i class="red" ng-style="{width: c.pct + '%'}"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="panel">
+            <h2 class="panel-title">Latest activity</h2>
+            <p class="empty" ng-if="!d.recent().length">No transactions yet.</p>
+            <table class="table align-middle mb-0" ng-if="d.recent().length">
+              <tbody>
+                <tr ng-repeat="t in d.recent()">
+                  <td>{{t.title}}<div class="muted small">{{t.category}}</div></td>
+                  <td class="muted">{{t.date | date:'dd MMM yyyy'}}</td>
+                  <td class="text-end amt" ng-class="t.type">{{t.type === 'income' ? '+' : '−'}}{{t.amount | inr}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TRANSACTIONS ================= -->
+    <section ng-if="main.view === 'transactions'" ng-controller="TransactionCtrl as tc">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h1 class="page-title mb-0">Income &amp; spending</h1>
+        <button class="btn btn-piggy" ng-click="tc.open()"><i class="fa-solid fa-plus"></i> Add transaction</button>
+      </div>
+      <div class="panel mb-3">
+        <div class="row g-2">
+          <div class="col-md-5"><input type="search" class="form-control" placeholder="Search by title or category" ng-model="tc.q" aria-label="Search"></div>
+          <div class="col-6 col-md-3">
+            <select class="form-select" ng-model="tc.type" aria-label="Filter by type">
+              <option value="">All types</option><option value="income">Income</option><option value="expense">Expenses</option><option value="saving">Savings</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-4">
+            <select class="form-select" ng-model="tc.sort" aria-label="Sort">
+              <option value="-date">Newest first</option><option value="date">Oldest first</option>
+              <option value="-amount">Highest amount</option><option value="amount">Lowest amount</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="panel p-0 table-wrap">
+        <p class="empty m-3" ng-if="!(tc.list() | filter:tc.q).length">No transactions match. Clear the filters or add a new one.</p>
+        <table class="table align-middle mb-0" ng-if="(tc.list() | filter:tc.q).length">
+          <thead><tr><th>Title</th><th>Category</th><th>Date</th><th class="text-end">Amount</th><th></th></tr></thead>
+          <tbody>
+            <tr ng-repeat="t in tc.list() | filter:tc.q | orderBy:tc.sort">
+              <td>{{t.title}}</td>
+              <td><span class="tag" ng-class="t.type">{{t.category}}</span></td>
+              <td class="muted">{{t.date | date:'dd MMM yyyy'}}</td>
+              <td class="text-end amt" ng-class="t.type">{{t.type === 'income' ? '+' : '−'}}{{t.amount | inr}}</td>
+              <td class="text-end text-nowrap">
+                <button class="icon-btn" ng-click="tc.open(t)" aria-label="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="icon-btn danger" ng-click="tc.remove(t)" aria-label="Delete"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-back" ng-if="tc.showForm" ng-click="tc.close()">
+        <div class="modal-card" ng-click="$event.stopPropagation()">
+          <h2 class="panel-title">{{tc.form.id ? 'Edit transaction' : 'Add transaction'}}</h2>
+          <form name="f" novalidate ng-submit="tc.save(f)">
+            <div class="btn-group w-100 mb-3" role="group">
+              <button type="button" class="btn seg" ng-class="{on: tc.form.type === 'income'}" ng-click="tc.setType('income')">Income</button>
+              <button type="button" class="btn seg" ng-class="{on: tc.form.type === 'expense'}" ng-click="tc.setType('expense')">Expense</button>
+            </div>
+            <label class="form-label">Title</label>
+            <input name="title" class="form-control" ng-model="tc.form.title" required maxlength="40">
+            <div class="err" ng-if="f.$submitted && f.title.$invalid">Enter a title.</div>
+            <label class="form-label mt-3">Amount (₹)</label>
+            <input name="amount" type="number" class="form-control" ng-model="tc.form.amount" min="1" required>
+            <div class="err" ng-if="f.$submitted && f.amount.$invalid">Enter an amount greater than 0.</div>
+            <label class="form-label mt-3">Category</label>
+            <select name="category" class="form-select" ng-model="tc.form.category" ng-options="c for c in tc.categories()" required></select>
+            <div class="err" ng-if="f.$submitted && f.category.$invalid">Choose a category.</div>
+            <label class="form-label mt-3">Date</label>
+            <input name="date" type="date" class="form-control" ng-model="tc.form.date" required>
+            <div class="err" ng-if="f.$submitted && f.date.$invalid">Pick a valid date.</div>
+            <div class="d-flex gap-2 justify-content-end mt-4">
+              <button type="button" class="btn btn-light" ng-click="tc.close()">Cancel</button>
+              <button type="submit" class="btn btn-piggy">Save transaction</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PIGGY BANK ================= -->
+    <section ng-if="main.view === 'piggy'" ng-controller="GoalCtrl as g">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h1 class="page-title mb-0">Piggy bank goals</h1>
+        <button class="btn btn-piggy" ng-click="g.openGoal()"><i class="fa-solid fa-plus"></i> New goal</button>
+      </div>
+      <p class="muted">Available to save: <strong>{{g.balance() | inr}}</strong></p>
+      <p class="empty" ng-if="!g.goals.length">No goals yet. Create one to start filling your piggy bank.</p>
+      <div class="row g-3">
+        <div class="col-md-6 col-xl-4" ng-repeat="goal in g.goals">
+          <div class="panel h-100">
+            <div class="d-flex justify-content-between">
+              <h2 class="panel-title">{{goal.name}}</h2>
+              <button class="icon-btn danger" ng-click="g.removeGoal(goal)" aria-label="Delete goal"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            <div class="bar big"><i class="pink" ng-style="{width: g.pct(goal) + '%'}"></i></div>
+            <p class="my-2">{{goal.saved | inr}} <span class="muted">of {{goal.target | inr}} ({{g.pct(goal)}}%)</span></p>
+            <p class="small text-success" ng-if="g.pct(goal) >= 100"><i class="fa-solid fa-circle-check"></i> Goal reached</p>
+            <button class="btn btn-outline-piggy btn-sm" ng-click="g.openDeposit(goal)" ng-disabled="g.pct(goal) >= 100">Add money</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-back" ng-if="g.mode" ng-click="g.close()">
+        <div class="modal-card" ng-click="$event.stopPropagation()">
+          <h2 class="panel-title">{{g.mode === 'goal' ? 'New goal' : 'Add money to ' + g.target.name}}</h2>
+          <form name="gf" novalidate ng-submit="g.submit(gf)">
+            <div ng-if="g.mode === 'goal'">
+              <label class="form-label">Goal name</label>
+              <input name="name" class="form-control" ng-model="g.form.name" required maxlength="30">
+              <div class="err" ng-if="gf.$submitted && gf.name.$invalid">Enter a goal name.</div>
+              <label class="form-label mt-3">Target amount (₹)</label>
+              <input name="target" type="number" class="form-control" ng-model="g.form.target" min="1" required>
+              <div class="err" ng-if="gf.$submitted && gf.target.$invalid">Enter a target above 0.</div>
+            </div>
+            <div ng-if="g.mode === 'deposit'">
+              <label class="form-label">Amount (₹)</label>
+              <input name="amount" type="number" class="form-control" ng-model="g.form.amount" min="1" required>
+              <div class="err" ng-if="gf.$submitted && gf.amount.$invalid">Enter an amount above 0.</div>
+            </div>
+            <div class="d-flex gap-2 justify-content-end mt-4">
+              <button type="button" class="btn btn-light" ng-click="g.close()">Cancel</button>
+              <button type="submit" class="btn btn-piggy">{{g.mode === 'goal' ? 'Create goal' : 'Add money'}}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= INVESTING ================= -->
+    <section ng-if="main.view === 'invest'" ng-controller="InvestCtrl as iv">
+      <h1 class="page-title">Investing plans</h1>
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="panel">
+            <h2 class="panel-title">Plan a monthly investment</h2>
+            <form name="pf" novalidate ng-submit="iv.save(pf)">
+              <label class="form-label">Plan name</label>
+              <input name="name" class="form-control" ng-model="iv.form.name" required maxlength="30">
+              <div class="err" ng-if="pf.$submitted && pf.name.$invalid">Enter a plan name.</div>
+              <label class="form-label mt-3">Type</label>
+              <select class="form-select" ng-model="iv.form.type" ng-options="o.name for o in iv.options" ng-change="iv.form.rate = iv.form.type.rate"></select>
+              <div class="row g-2 mt-1">
+                <div class="col-6"><label class="form-label">Monthly (₹)</label>
+                  <input name="monthly" type="number" class="form-control" ng-model="iv.form.monthly" min="100" required>
+                  <div class="err" ng-if="pf.$submitted && pf.monthly.$invalid">Minimum ₹100.</div></div>
+                <div class="col-6"><label class="form-label">Years</label>
+                  <input name="years" type="number" class="form-control" ng-model="iv.form.years" min="1" max="40" required>
+                  <div class="err" ng-if="pf.$submitted && pf.years.$invalid">Use 1–40 years.</div></div>
+              </div>
+              <label class="form-label mt-3">Expected return (% a year)</label>
+              <input name="rate" type="number" step="0.1" class="form-control" ng-model="iv.form.rate" min="1" max="30" required>
+              <div class="err" ng-if="pf.$submitted && pf.rate.$invalid">Use 1–30%.</div>
+              <div class="preview" ng-if="pf.$valid">
+                You invest <strong>{{iv.invested(iv.form) | inr}}</strong> and may reach <strong>{{iv.future(iv.form) | inr}}</strong>.
+              </div>
+              <button type="submit" class="btn btn-piggy mt-3 w-100">Save plan</button>
+            </form>
+            <p class="muted small mt-3 mb-0">Projections are estimates, not guaranteed returns.</p>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <p class="empty" ng-if="!iv.plans.length">No plans yet. Fill in the form to create your first one.</p>
+          <div class="panel mb-3" ng-repeat="p in iv.plans">
+            <div class="d-flex justify-content-between">
+              <h2 class="panel-title">{{p.name}} <span class="tag">{{p.type}}</span></h2>
+              <button class="icon-btn danger" ng-click="iv.remove(p)" aria-label="Delete plan"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            <div class="row text-center g-2">
+              <div class="col-4"><div class="muted small">Monthly</div><strong>{{p.monthly | inr}}</strong></div>
+              <div class="col-4"><div class="muted small">Invested</div><strong>{{iv.invested(p) | inr}}</strong></div>
+              <div class="col-4"><div class="muted small">Projected in {{p.years}}y @ {{p.rate}}%</div><strong class="text-success">{{iv.future(p) | inr}}</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast-stack" aria-live="polite">
+  <div class="toast-msg" ng-repeat="t in main.toasts" ng-class="t.kind">{{t.text}}</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js"></script>
+<script src="js/app.js"></script>
+<script src="js/services.js"></script>
+<script src="js/controllers.js"></script>
+</body>
+</html>
